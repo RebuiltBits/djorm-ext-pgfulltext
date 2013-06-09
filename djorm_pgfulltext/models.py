@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from functools import wraps
 from itertools import repeat
 
 # Python3 compatibility
@@ -8,8 +9,19 @@ try:
 except ImportError:
     from django.utils.encoding import force_text
 
+from django.conf import settings
 from django.db import models, connections, transaction
 
+
+def disable_for_loaddata(signal_handler):
+    @wraps(signal_handler)
+    def wrapper(*args, **kwargs):
+        if kwargs['raw']:
+            return
+        signal_handler(*args, **kwargs)
+    return wrapper
+
+@disable_for_loaddata
 def auto_update_search_field_handler(sender, instance, *args, **kwargs):
     instance.update_search_field()
 
@@ -158,7 +170,6 @@ class SearchManagerMixIn(object):
 
         If there is no search_field, this function does nothing.
         '''
-
         if not self.search_field:
             return
 
